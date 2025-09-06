@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏠 House Price Predictor</title>
+
+  <!-- Minimal, self-contained styling -->
+  <style>
+    :root{
+      --bg:#0f172a;          /* slate-900 */
+      --panel:#111827;       /* gray-900 */
+      --muted:#94a3b8;       /* slate-400 */
+      --text:#e5e7eb;        /* gray-200 */
+      --accent:#22c55e;      /* green-500 */
+      --accent-2:#3b82f6;    /* blue-500 */
+      --danger:#ef4444;      /* red-500 */
+      --card:#0b1222;
+      --input:#0b1222;
+      --ring:rgba(59,130,246,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% -20%, #1e293b 0%, #0f172a 40%, #0b1222 100%);
+      color: var(--text);
+    }
+    .container{
+      max-width: 980px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .title{
+      text-align:center;
+      margin-bottom: 18px;
+      font-weight: 800;
+      letter-spacing:.2px;
+      font-size: clamp(22px, 4vw, 36px);
+    }
+    .subtitle{
+      text-align:center;
+      color: var(--muted);
+      margin-bottom: 26px;
+      font-size: .98rem;
+    }
+    .card{
+      background: rgba(17,24,39,.6);
+      border: 1px solid rgba(148,163,184,.15);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .card-header{
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(148,163,184,.12);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .badge{
+      background: linear-gradient(90deg, var(--accent-2), var(--accent));
+      color:white;
+      font-weight:700;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.8rem;
+    }
+    form{
+      padding: 22px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+    .col-6{ grid-column: span 6; }
+    .col-12{ grid-column: span 12; }
+
+    @media (max-width: 820px){
+      .col-6{ grid-column: span 12; }
+    }
+
+    label{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:.92rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .hint{
+      font-size:.78rem;
+      color: var(--muted);
+      opacity:.9;
+      margin-left: 6px;
+    }
+    input[type="number"], select{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.2);
+      background: var(--input);
+      color: var(--text);
+      outline:none;
+      transition: box-shadow .2s, border-color .2s, transform .02s;
+    }
+    input[type="number"]:focus, select:focus{
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 4px var(--ring);
+    }
+    .range-wrap{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent-2);
+    }
+    .btns{
+      display:flex;
+      gap:12px;
+      margin-top: 8px;
+    }
+    button{
+      cursor:pointer;
+      border:0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      transition: transform .03s ease, filter .2s ease, background .2s ease;
+    }
+    .btn-primary{
+      background: linear-gradient(90deg, var(--accent-2), var(--accent));
+      color:#fff;
+    }
+    .btn-secondary{
+      background: rgba(148,163,184,.12);
+      color: var(--text);
+    }
+    button:active{ transform: translateY(1px); }
+    .footer{
+      padding: 18px 22px;
+      border-top: 1px solid rgba(148,163,184,.12);
+      color: var(--muted);
+      font-size:.9rem;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .result{
+      margin: 18px 22px 26px;
+      padding: 16px;
+      background: rgba(99,102,241,.08);
+      border: 1px dashed rgba(99,102,241,.45);
+      border-radius: 14px;
+      font-size: 1.06rem;
+    }
+
+    /* Loading overlay */
+    .overlay{
+      position: fixed;
+      inset: 0;
+      display:none;
+      place-items: center;
+      background: rgba(2,6,23,.55);
+      backdrop-filter: blur(2px);
+      z-index: 50;
+    }
+    .spinner{
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin{
+      to{ transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">🏠 House Price Prediction</h1>
+    <p class="subtitle">Fill in the property details and get an estimated price. Fields are validated and sliders sync with inputs.</p>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="badge">Live Form</span>
+        <span class="hint">Your data is sent securely to the server for prediction.</span>
+      </div>
+
+      <form action="/predict" method="post" id="predict-form">
+        <div class="grid">
+          <!-- Area -->
+          <div class="col-6">
+            <label>
+              <span>Area (sq ft)</span>
+              <span class="hint" id="areaValue">2000</span>
+            </label>
+            <input type="number" name="area" id="area" min="500" max="10000" step="50" value="2000" required />
+            <div class="range-wrap">
+              <input type="range" id="areaRange" min="500" max="10000" step="50" value="2000" />
+            </div>
+          </div>
+
+          <!-- Bedrooms -->
+          <div class="col-6">
+            <label>
+              <span>Bedrooms</span>
+              <span class="hint" id="bedroomsValue">3</span>
+            </label>
+            <input type="number" name="bedrooms" id="bedrooms" min="1" max="10" value="3" required />
+            <div class="range-wrap">
+              <input type="range" id="bedroomsRange" min="1" max="10" step="1" value="3" />
+            </div>
+          </div>
+
+          <!-- Bathrooms -->
+          <div class="col-6">
+            <label>
+              <span>Bathrooms</span>
+              <span class="hint" id="bathroomsValue">2</span>
+            </label>
+            <input type="number" name="bathrooms" id="bathrooms" min="1" max="5" value="2" required />
+            <div class="range-wrap">
+              <input type="range" id="bathroomsRange" min="1" max="5" step="1" value="2" />
+            </div>
+          </div>
+
+          <!-- Stories -->
+          <div class="col-6">
+            <label>
+              <span>Stories</span>
+              <span class="hint" id="storiesValue">2</span>
+            </label>
+            <input type="number" name="stories" id="stories" min="1" max="5" value="2" required />
+            <div class="range-wrap">
+              <input type="range" id="storiesRange" min="1" max="5" step="1" value="2" />
+            </div>
+          </div>
+
+          <!-- Parking -->
+          <div class="col-6">
+            <label>
+              <span>Parking spaces</span>
+              <span class="hint" id="parkingValue">1</span>
+            </label>
+            <input type="number" name="parking" id="parking" min="0" max="5" value="1" required />
+            <div class="range-wrap">
+              <input type="range" id="parkingRange" min="0" max="5" step="1" value="1" />
+            </div>
+          </div>
+
+          <!-- Main Road -->
+          <div class="col-6">
+            <label>Main Road <span class="hint">Access</span></label>
+            <select name="mainroad" id="mainroad">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Guest Room -->
+          <div class="col-6">
+            <label>Guest Room</label>
+            <select name="guestroom" id="guestroom">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Basement -->
+          <div class="col-6">
+            <label>Basement</label>
+            <select name="basement" id="basement">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Hot Water Heating -->
+          <div class="col-6">
+            <label>Hot Water Heating</label>
+            <select name="hotwaterheating" id="hotwaterheating">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Air Conditioning -->
+          <div class="col-6">
+            <label>Air Conditioning</label>
+            <select name="airconditioning" id="airconditioning">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Preferred Area -->
+          <div class="col-6">
+            <label>Preferred Area</label>
+            <select name="prefarea" id="prefarea">
+              <option>yes</option>
+              <option>no</option>
+            </select>
+          </div>
+
+          <!-- Furnishing Status -->
+          <div class="col-6">
+            <label>Furnishing Status</label>
+            <select name="furnishingstatus" id="furnishingstatus">
+              <option>furnished</option>
+              <option>semi-furnished</option>
+              <option>unfurnished</option>
+            </select>
+          </div>
+
+          <div class="col-12 btns">
+            <button type="submit" class="btn-primary" id="submitBtn">Predict Price</button>
+            <button type="reset" class="btn-secondary" id="resetBtn">Reset</button>
+          </div>
+        </div>
+      </form>
+
+      {% if prediction_text %}
+        <div class="result" id="prediction">
+          <strong>Result:</strong> {{ prediction_text }}
+        </div>
+      {% endif %}
+
+      <div class="footer">
+        <div>Tip: Larger area, more bathrooms, and premium features (AC, basement) often increase the predicted price.</div>
+        <div>Model served by Flask • Form posts to <code>/predict</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div class="overlay" id="overlay">
+    <div class="spinner" aria-label="Loading"></div>
+  </div>
+
+  <!-- Interactions (no external libs) -->
+  <script>
+    // Helpers to sync number inputs with sliders
+    function syncPair(numberEl, rangeEl, labelEl){
+      const sync = (fromNumber) => {
+        if(fromNumber){
+          rangeEl.value = numberEl.value;
+        }else{
+          numberEl.value = rangeEl.value;
+        }
+        labelEl.textContent = numberEl.value;
+      };
+      numberEl.addEventListener('input', ()=>sync(true));
+      rangeEl.addEventListener('input', ()=>sync(false));
+      sync(true);
+    }
+
+    // Setup all pairs
+    syncPair(
+      document.getElementById('area'),
+      document.getElementById('areaRange'),
+      document.getElementById('areaValue')
+    );
+    syncPair(
+      document.getElementById('bedrooms'),
+      document.getElementById('bedroomsRange'),
+      document.getElementById('bedroomsValue')
+    );
+    syncPair(
+      document.getElementById('bathrooms'),
+      document.getElementById('bathroomsRange'),
+      document.getElementById('bathroomsValue')
+    );
+    syncPair(
+      document.getElementById('stories'),
+      document.getElementById('storiesRange'),
+      document.getElementById('storiesValue')
+    );
+    syncPair(
+      document.getElementById('parking'),
+      document.getElementById('parkingRange'),
+      document.getElementById('parkingValue')
+    );
+
+    // Show a loading overlay on submit
+    const form = document.getElementById('predict-form');
+    const overlay = document.getElementById('overlay');
+    const submitBtn = document.getElementById('submitBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    form.addEventListener('submit', function(){
+      overlay.style.display = 'grid';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Predicting...';
+    });
+
+    // Reset UI nicely
+    form.addEventListener('reset', function(){
+      setTimeout(()=>{
+        document.getElementById('area').value = 2000;
+        document.getElementById('areaRange').value = 2000;
+        document.getElementById('bedrooms').value = 3;
+        document.getElementById('bedroomsRange').value = 3;
+        document.getElementById('bathrooms').value = 2;
+        document.getElementById('bathroomsRange').value = 2;
+        document.getElementById('stories').value = 2;
+        document.getElementById('storiesRange').value = 2;
+        document.getElementById('parking').value = 1;
+        document.getElementById('parkingRange').value = 1;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Predict Price';
+      }, 0);
+    });
+
+    // Hide overlay when page renders with result (server round trip)
+    window.addEventListener('pageshow', ()=> {
+      overlay.style.display = 'none';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Predict Price';
+    });
+
+    // Optional: format ₹ amounts in the result if present
+    (function(){
+      const el = document.getElementById('prediction');
+      if(!el) return;
+      const txt = el.textContent;
+      const match = txt.match(/([\u20B9₹]\s?)([\d,]+(?:\.\d+)?)/);
+      if(match){
+        const num = Number(match[2].replace(/,/g,''));
+        if(!isNaN(num)){
+          const formatted = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(num);
+          el.innerHTML = '<strong>Result:</strong> ' + match[1].replace(/₹/,'₹ ') + formatted.replace('₹','').trim();
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
